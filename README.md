@@ -13,6 +13,18 @@
 
 4. Put the model in a `models` directory
 
+5. Unzip the model
+
+6. Install Coqui TTS with the following commands:
+    - 1
+    - 2
+
+7. Change the parameters in `main.py`
+
+8. Execute `main.py`
+
 ## Other requirements
+
+You should have a version of python inferior to 3.10. If it is not the case, do not hesitate to create conda environment.
 
 The package ffmepg is necessary for the audio processings.
