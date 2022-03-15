@@ -1,3 +1,4 @@
 vosk
 pydub
 pandas
+tqdm

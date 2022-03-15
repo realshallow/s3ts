@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
+import math
 from pathlib import Path
 from typing import List
+from tqdm import tqdm
 from vosk import Model, KaldiRecognizer
 import pandas as pd
 import os
@@ -12,8 +14,9 @@ from pydub import AudioSegment
 class DBExtractor:
     def __init__(
         self,
-        min_duration: int = 5000,
-        max_duration: int = 15000,
+        path: Path,
+        min_duration: int = 3000,
+        max_duration: int = 6000,
         min_confidence: float = 0.65,
     ) -> None:
         self.min_duration = min_duration
@@ -25,12 +28,12 @@ class DBExtractor:
         self.wav_filesizes = []
         self.transcripts = []
 
-        self.path = Path("data")
+        self.path = path
 
     def generate_data(self, model_path: Path, data_path: Path) -> None:
         extraction = self.extract_text(model_path, data_path)
         self.split_data(data_path, extraction)
-        self.to_csv(data_path)
+        self.to_csv()
 
     def extract_text(self, model_path: Path, data_path: Path):
         self.reset()
@@ -55,19 +58,20 @@ class DBExtractor:
         rec = KaldiRecognizer(model, wf.getframerate())
         rec.SetWords(True)
 
+        pbar = tqdm(total=math.ceil(wf.getnframes()/1000))
         while True:
-            data = wf.readframes(4000)
+            data = wf.readframes(1000)
             if len(data) == 0:
                 break
             if rec.AcceptWaveform(data):
                 pass
-
+            pbar.update(1)
         res = rec.Result()
         return eval(res)
 
     def split_data(self, data_path: Path, extraction: dict) -> None:
-        sound = AudioSegment.from_mp3(data_path)
-        data_folder = Path("data", data_path.stem)
+        sound = AudioSegment.from_wav(data_path)
+        data_folder = Path(data_path.parent, "wavs")
         data_folder.mkdir(parents=True, exist_ok=True)
 
         words = extraction["result"]
@@ -83,33 +87,26 @@ class DBExtractor:
                 end = int(words[i]["end"] * 1000)
                 i += 1
             if end - start > self.min_duration:
-                self.create_utterance(start, end, current_words, sound, data_path)
+                self.create_utterance(start, end, current_words, sound, data_folder)
 
     def create_utterance(
         self, start: int, end: int, list_words: list, sound, data_path: Path
     ) -> None:
         utterance = sound[start:end]
-        utt_path = Path(
-            str(data_path)[:-4], str(data_path.stem) + str(self.n_utterance) + ".wav"
-        )
+        utt_path = Path(data_path, "audio_" + str(self.n_utterance) + ".wav")
         self.wav_filenames.append(utt_path)
         self.transcripts.append(" ".join(list_words))
         self.export(utterance, utt_path)
-        self.wav_filesizes.append(os.path.getsize(utt_path))
         self.n_utterance += 1
 
     def export(self, sound, dst_path: Path) -> None:
         sound.export(dst_path, format="wav")
 
-    def to_csv(self, data_path) -> None:
+    def to_csv(self) -> None:
         df = pd.DataFrame(
-            {
-                "wav_filename": self.wav_filenames,
-                "wav_filesize": self.wav_filesizes,
-                "transcript": self.transcripts,
-            }
+            {"wav_filename": self.wav_filenames, "transcript": self.transcripts,}
         )
-        df.to_csv(Path(self.path, "metadata_" + str(data_path.stem) + ".csv"))
+        df.to_csv(Path(self.path, "metadata.txt"), sep="|", index=False, header=False)
 
     def reset(self) -> None:
         self.n_utterance = 0

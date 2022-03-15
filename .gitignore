@@ -135,3 +135,7 @@ data/*
 models/*
 
 .vscode/*
+
+*.wav
+*.mp3
+*.txt
