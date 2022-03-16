@@ -3,6 +3,7 @@
 import math
 from pathlib import Path
 from typing import List
+import numpy as np
 from tqdm import tqdm
 from vosk import Model, KaldiRecognizer
 import pandas as pd
@@ -15,13 +16,18 @@ class DBExtractor:
     def __init__(
         self,
         path: Path,
-        min_duration: int = 3000,
-        max_duration: int = 6000,
+        min_duration: int = 2000,
+        mean_duration: int = 3500,
+        max_duration: int = 5000,
         min_confidence: float = 0.65,
         frame_rate: int = 16000,
     ) -> None:
         self.min_duration = min_duration
+        self.mean_duration = mean_duration
         self.max_duration = max_duration
+
+        # 3 sigmas
+        self.variance = (mean_duration - min_duration) / 3
 
         self.min_confidence = min_confidence
         self.n_utterance = 0
@@ -102,12 +108,15 @@ class DBExtractor:
         self.rec = KaldiRecognizer(self.model, self.frame_rate)
         self.rec.SetWords(True)
 
-    def split_data(self, data_path: Path, extraction: dict) -> None:
+    def split_data(
+        self, data_path: Path, extraction: dict, random: bool = True
+    ) -> None:
         sound = AudioSegment.from_wav(data_path)
         data_folder = Path(data_path.parent, "wavs")
         data_folder.mkdir(parents=True, exist_ok=True)
 
         words = extraction["result"]
+        max_duration = self.max_duration
 
         n_words = len(words)
         i = 0
@@ -115,10 +124,12 @@ class DBExtractor:
             current_words = []
             start = int(words[i]["start"] * 1000)
             end = start
+            if random:
+                max_duration = np.random.normal(self.mean_duration, self.variance)
             while (
                 i < n_words
                 and words[i]["confidence"] > self.min_confidence
-                and end - start < self.max_duration
+                and end - start < max_duration
             ):
                 current_words.append(words[i]["word"])
                 end = int(words[i]["end"] * 1000)

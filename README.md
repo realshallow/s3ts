@@ -16,8 +16,9 @@
 5. Unzip the model
 
 6. Install Coqui TTS with the following commands:
-    - 1
-    - 2
+    1.
+    2.
+    3. Change the pytorch version if you have a modern GPU
 
 7. Change the parameters in `main.py`
 
@@ -28,3 +29,7 @@
 You should have a version of python inferior to 3.10. If it is not the case, do not hesitate to create conda environment.
 
 The package ffmepg is necessary for the audio processings.
+
+## Acknoledgments
+
+Thanks to VOSK and Coqui TTS for their open-source software
