@@ -73,7 +73,7 @@ class DBExtractor:
         self.split_data(data_path, extraction)
 
     def extract_text(self, data_path: Path):
-        wf = wave.open(data_path, "rb")
+        wf = wave.open(str(data_path), "rb")
 
         if (
             wf.getnchannels() != 1
