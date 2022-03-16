@@ -128,7 +128,7 @@ class DBExtractor:
                 max_duration = np.random.normal(self.mean_duration, self.variance)
             while (
                 i < n_words
-                and words[i]["confidence"] > self.min_confidence
+                and words[i]["conf"] > self.min_confidence
                 and end - start < max_duration
             ):
                 current_words.append(words[i]["word"])
