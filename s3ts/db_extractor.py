@@ -18,6 +18,7 @@ class DBExtractor:
         min_duration: int = 3000,
         max_duration: int = 6000,
         min_confidence: float = 0.65,
+        frame_rate: int = 16000,
     ) -> None:
         self.min_duration = min_duration
         self.max_duration = max_duration
@@ -28,23 +29,45 @@ class DBExtractor:
         self.wav_filesizes = []
         self.transcripts = []
 
+        self.frame_rate = frame_rate
+
         self.path = path
 
-    def generate_data(self, model_path: Path, data_path: Path) -> None:
-        extraction = self.extract_text(model_path, data_path)
-        self.split_data(data_path, extraction)
+    def generate_data(
+        self, model_path: Path, data_path: Path, verbose: bool = True
+    ) -> None:
+        self.load_model(model_path)
+        # Multiple data files
+        if data_path.is_dir():
+            source_files = [
+                file for file in list(data_path.glob("*")) if file.suffix == ".wav"
+            ]
+            if verbose:
+                print("Found", len(source_files), "audio files to process.")
+            i = 1
+            for file_path in source_files:
+                if verbose:
+                    print("Processing", file_path.name)
+                    print("Operation", i, "on", len(source_files))
+                self.process_file(file_path)
+                i += 1
+
+        # Single data file
+        elif data_path.is_file():
+            self.process_file(data_path)
+
+        # Save the data to csv
         self.to_csv()
 
-    def extract_text(self, model_path: Path, data_path: Path):
-        self.reset()
-        if not os.path.exists(model_path):
-            print(
-                "Please download the model from https://alphacephei.com/vosk/models and unpack as \
-                    'model' in the current folder."
-            )
-            exit(1)
+    def process_file(self, data_path: Path):
+        print("Starting extraction.")
+        extraction = self.extract_text(data_path)
 
-        wf = wave.open(str(data_path), "rb")
+        print("Splitting the data and saving metadata.")
+        self.split_data(data_path, extraction)
+
+    def extract_text(self, data_path: Path):
+        wf = wave.open(data_path, "rb")
 
         if (
             wf.getnchannels() != 1
@@ -54,20 +77,30 @@ class DBExtractor:
             print("Audio file must be WAV format mono PCM.")
             exit(1)
 
-        model = Model(str(model_path))
-        rec = KaldiRecognizer(model, wf.getframerate())
-        rec.SetWords(True)
-
-        pbar = tqdm(total=math.ceil(wf.getnframes()/1000))
+        pbar = tqdm(total=math.ceil(wf.getnframes() / 1000))
         while True:
             data = wf.readframes(1000)
             if len(data) == 0:
                 break
-            if rec.AcceptWaveform(data):
+            if self.rec.AcceptWaveform(data):
                 pass
             pbar.update(1)
-        res = rec.Result()
+        pbar.close()
+        res = self.rec.Result()
         return eval(res)
+
+    def load_model(self, model_path: Path) -> None:
+        if not model_path.exists():
+            print(
+                "Please download the model from https://alphacephei.com/vosk/models and unpack as \
+                    'model' in the current folder."
+            )
+            exit(1)
+
+        self.model = Model(str(model_path))
+
+        self.rec = KaldiRecognizer(self.model, self.frame_rate)
+        self.rec.SetWords(True)
 
     def split_data(self, data_path: Path, extraction: dict) -> None:
         sound = AudioSegment.from_wav(data_path)
@@ -82,7 +115,11 @@ class DBExtractor:
             current_words = []
             start = int(words[i]["start"] * 1000)
             end = start
-            while i < n_words and end - start < self.max_duration:
+            while (
+                i < n_words
+                and words[i]["confidence"] > self.min_confidence
+                and end - start < self.max_duration
+            ):
                 current_words.append(words[i]["word"])
                 end = int(words[i]["end"] * 1000)
                 i += 1
@@ -94,12 +131,13 @@ class DBExtractor:
     ) -> None:
         utterance = sound[start:end]
         utt_path = Path(data_path, "audio_" + str(self.n_utterance) + ".wav")
-        self.wav_filenames.append(utt_path)
+        self.wav_filenames.append(utt_path.stem)
         self.transcripts.append(" ".join(list_words))
         self.export(utterance, utt_path)
         self.n_utterance += 1
 
     def export(self, sound, dst_path: Path) -> None:
+        sound = sound.set_frame_rate(16000)
         sound.export(dst_path, format="wav")
 
     def to_csv(self) -> None:
@@ -111,5 +149,4 @@ class DBExtractor:
     def reset(self) -> None:
         self.n_utterance = 0
         self.wav_filenames = []
-        self.wav_filesizes = []
         self.transcripts = []
