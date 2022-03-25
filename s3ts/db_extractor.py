@@ -133,6 +133,10 @@ class DBExtractor:
 
         n_words = len(words)
         i = 0
+        n_accepted = 0
+        t_accepted = 0
+        n_rejected = 0
+        t_rejected = 0
         while i < n_words:
             current_words = []
             start = int(words[i]["start"] * 1000)
@@ -156,10 +160,18 @@ class DBExtractor:
                 i += 1
 
             if end - start > self.min_duration:
+                n_accepted += 1
+                t_accepted += end - start
                 self.create_utterance(start, end, current_words, sound, data_folder)
             else:
                 i += 1
-                print("refused.", end - start)
+                n_rejected += 1
+                t_rejected += end - start
+        print("Number of accepted samples:", n_accepted)
+        print("Duration of accepted samples:", t_accepted)
+
+        print("Number of rejected samples:", n_rejected)
+        print("Duration of rejected samples:", t_rejected)
 
     def create_utterance(
         self, start: int, end: int, list_words: list, sound, data_path: Path
