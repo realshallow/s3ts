@@ -20,11 +20,24 @@ class DBExtractor:
         mean_duration: int = 3500,
         max_duration: int = 5000,
         min_confidence: float = 0.65,
+        max_silence: int = 700,
         frame_rate: int = 16000,
     ) -> None:
+        """
+        Default constructor for the Extractor Tool.
+
+        Args:
+            path (Path): The path to the dataset.
+            min_duration (int, optional): The minimum duration of the audio. Defaults to 2000.
+            mean_duration (int, optional): The mean duration of the audio. Defaults to 3500.
+            max_duration (int, optional): The max duration of the audio. Defaults to 5000.
+            min_confidence (float, optional): The minimum required confidence to be validated. Defaults to 0.65.
+            frame_rate (int, optional): The number of samples per second. Defaults to 16000.
+        """
         self.min_duration = min_duration
         self.mean_duration = mean_duration
         self.max_duration = max_duration
+        self.max_silence = max_silence
 
         # 3 sigmas
         self.variance = (mean_duration - min_duration) / 3
@@ -125,17 +138,28 @@ class DBExtractor:
             start = int(words[i]["start"] * 1000)
             end = start
             if random:
-                max_duration = np.random.normal(self.mean_duration, self.variance)
+                max_duration = max(
+                    min(
+                        np.random.normal(self.mean_duration, self.variance),
+                        self.max_duration,
+                    ),
+                    self.min_duration,
+                )
             while (
                 i < n_words
+                and words[i]["start"] * 1000 - end < self.max_silence
                 and words[i]["conf"] > self.min_confidence
                 and end - start < max_duration
             ):
                 current_words.append(words[i]["word"])
                 end = int(words[i]["end"] * 1000)
                 i += 1
+
             if end - start > self.min_duration:
                 self.create_utterance(start, end, current_words, sound, data_folder)
+            else:
+                i += 1
+                print("refused.", end - start)
 
     def create_utterance(
         self, start: int, end: int, list_words: list, sound, data_path: Path

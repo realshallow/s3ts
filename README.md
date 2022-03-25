@@ -2,9 +2,11 @@
 
 ## Installation
 
-1. Create a virtual environment with `python3 -m venv .s3tsenv`.
+1. Create a virtual environment with `conda create -n s3tsenv python=3.8`.
 
-2. Activate the environment with `source .s3tsenv/bin/activate`.
+2. Activate the environment with `conda activate s3tsenv`.
+
+3. Install the requirements with `pip3 install -r requirements.txt`
 
 3. Install TTS models - for French:
     - Vosk small model https://alphacephei.com/vosk/models/vosk-model-small-fr-pguyot-0.3.zip
@@ -16,13 +18,18 @@
 5. Unzip the model
 
 6. Install Coqui TTS with the following commands:
-    1.
-    2.
-    3. Change the pytorch version if you have a modern GPU
+
+    - `cd ..`
+
+    - `git clone https://github.com/coqui-ai/TTS`
+
+    - `pip install -e .`
+    
+    - You might have to change the version of PyTorch if you have a modern GPU
 
 7. Change the parameters in `main.py`
 
-8. Execute `main.py`
+8. Change the variables and execute `main.py` to create the database
 
 ## Other requirements
 
