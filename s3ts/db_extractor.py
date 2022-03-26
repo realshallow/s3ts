@@ -183,9 +183,9 @@ class DBExtractor:
         print("Number of rejected samples:", n_rejected)
         print("Number of rejected words:", n_words_rejected)
         if t_rejected > 60000:
-            print("Duration of accepted samples:", round(t_rejected / 60000, 1), "min")
+            print("Duration of rejected samples:", round(t_rejected / 60000, 1), "min")
         else:
-            print("Duration of accepted samples:", round(t_rejected / 1000, 1), "s")
+            print("Duration of rejected samples:", round(t_rejected / 1000, 1), "s")
 
     def create_utterance(
         self, start: int, end: int, list_words: list, sound, data_path: Path
