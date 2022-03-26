@@ -10,6 +10,7 @@ import pandas as pd
 import os
 import wave
 from pydub import AudioSegment
+from pydub.effects import normalize
 
 
 class DBExtractor:
@@ -137,6 +138,8 @@ class DBExtractor:
         t_accepted = 0
         n_rejected = 0
         t_rejected = 0
+        n_words_accepted = 0
+        n_words_rejected = 0
         while i < n_words:
             current_words = []
             start = int(words[i]["start"] * 1000)
@@ -162,28 +165,32 @@ class DBExtractor:
             if end - start > self.min_duration:
                 n_accepted += 1
                 t_accepted += end - start
+                n_words_accepted += len(current_words)
                 self.create_utterance(start, end, current_words, sound, data_folder)
             else:
                 i += 1
                 n_rejected += 1
                 t_rejected += end - start
+                n_words_rejected += len(current_words)
 
         print("Number of accepted samples:", n_accepted)
+        print("Number of accepted words:", n_words_accepted)
         if t_accepted > 60000:
-            print("Duration of accepted samples:", t_accepted / 60000, "min")
+            print("Duration of accepted samples:", round(t_accepted / 60000, 1), "min")
         else:
-            print("Duration of accepted samples:", t_accepted / 1000, "s")
+            print("Duration of accepted samples:", round(t_accepted / 1000, 1), "s")
 
         print("Number of rejected samples:", n_rejected)
+        print("Number of rejected words:", n_words_rejected)
         if t_rejected > 60000:
-            print("Duration of accepted samples:", t_rejected / 60000, "min")
+            print("Duration of accepted samples:", round(t_rejected / 60000, 1), "min")
         else:
-            print("Duration of accepted samples:", t_rejected / 1000, "s")
+            print("Duration of accepted samples:", round(t_rejected / 1000, 1), "s")
 
     def create_utterance(
         self, start: int, end: int, list_words: list, sound, data_path: Path
     ) -> None:
-        utterance = sound[start:end]
+        utterance = normalize(sound[start:end])
         utt_path = Path(data_path, "audio_" + str(self.n_utterance) + ".wav")
         self.wav_filenames.append(utt_path.stem)
         self.transcripts.append(" ".join(list_words))
