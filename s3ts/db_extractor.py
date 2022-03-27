@@ -45,6 +45,12 @@ class DBExtractor:
 
         self.min_confidence = min_confidence
         self.n_utterance = 0
+        self.n_accepted = 0
+        self.n_words_accepted = 0
+        self.t_accepted = 0
+        self.n_rejected = 0
+        self.n_words_rejected = 0
+        self.t_rejected = 0
         self.wav_filenames = []
         self.wav_filesizes = []
         self.transcripts = []
@@ -79,6 +85,7 @@ class DBExtractor:
 
         # Save the data to csv
         self.to_csv()
+        self.print_summary()
 
     def process_file(self, data_path: Path):
         print("Starting extraction.")
@@ -188,6 +195,13 @@ class DBExtractor:
         else:
             print("Duration of rejected samples:", round(t_rejected / 1000, 1), "s")
 
+        self.n_accepted += n_accepted
+        self.n_words_accepted += n_words_accepted
+        self.t_accepted += t_accepted
+        self.n_rejected += n_rejected
+        self.n_words_rejected += n_words_rejected
+        self.t_rejected += t_rejected
+
     def create_utterance(
         self, start: int, end: int, list_words: list, sound, data_path: Path
     ) -> None:
@@ -208,7 +222,41 @@ class DBExtractor:
         )
         df.to_csv(Path(self.path, "metadata.txt"), sep="|", index=False, header=False)
 
+    def print_summary(self) -> None:
+        print("\n\n#-----------------------  SUMMARY  -----------------------#")
+        print("Number of accepted samples:", self.n_accepted)
+        print("Number of accepted words:", self.n_words_accepted)
+        if self.t_accepted > 60000:
+            print(
+                "Duration of accepted samples:",
+                round(self.t_accepted / 60000, 1),
+                "min",
+            )
+        else:
+            print(
+                "Duration of accepted samples:", round(self.t_accepted / 1000, 1), "s"
+            )
+
+        print("Number of rejected samples:", self.n_rejected)
+        print("Number of rejected words:", self.n_words_rejected)
+        if self.t_rejected > 60000:
+            print(
+                "Duration of rejected samples:",
+                round(self.t_rejected / 60000, 1),
+                "min",
+            )
+        else:
+            print(
+                "Duration of rejected samples:", round(self.t_rejected / 1000, 1), "s"
+            )
+
     def reset(self) -> None:
         self.n_utterance = 0
+        self.n_accepted = 0
+        self.n_words_accepted = 0
+        self.t_accepted = 0
+        self.n_rejected = 0
+        self.n_words_rejected = 0
+        self.t_rejected = 0
         self.wav_filenames = []
         self.transcripts = []
