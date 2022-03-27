@@ -70,6 +70,7 @@ class DBExtractor:
                     print("Processing", file_path.name)
                     print("Operation", i, "on", len(source_files))
                 self.process_file(file_path)
+                self.load_model(model_path)
                 i += 1
 
         # Single data file
